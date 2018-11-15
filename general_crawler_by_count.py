@@ -1,7 +1,6 @@
 """often used to crawl news"""
 
 from common_crawler import *
-import numpy as np
 
 strip_list = [' ', '\\']  # only replace characters at the line's beginning and ending
 
@@ -15,10 +14,12 @@ def get_html(url):
         logging.info('connect error: %s', url)
         return None
 
-    encoding = re.findall('charset=["]*([^\s";]+)', html.text)  # get html encoding automatically
-    try:
-        html.encoding = encoding[0]
-    except:
+    a = re.search('charset=["\']?([^\s"\'; ]+)', html.text)     # get html encoding automatically
+
+    if not a:
+        html.encoding = a.group(1)
+
+    else:
         html.encoding = 'utf8'
     return html
 
@@ -46,21 +47,13 @@ def div(match):
 
     count = []
     for i in li:
-        words = re.findall(u'[a-zA-Z]+', i)
+        words = re.findall('[a-zA-Z0-9_-]+', i)
         count.append(len(i) - len(words) / 2)       # 2 English characters equals 1 chinese character
 
     kc = 2
     c = []
     for i in range(kc, len(count) - kc - 1):
         c.append(sum(count[i - kc:i + kc + 1]) / 5.)
-
-    # k = 10
-    # rat = []
-    # for i in range(k, len(c) - k - 1):
-    #     rat.append((sum(c[i + 1:i + 1 + k]) + k + 1.) / (sum(c[i - k:i]) + k + 1.))
-    # rat = np.array(rat)
-    #
-    # argmax = rat.argmax()
 
     flag = 0
     ret = []
@@ -75,6 +68,11 @@ def div(match):
 
     return ret
 
+def get_ret(url):
+    html = get_html(url)
+    match = fix_html(html.text)
+    ret = div(match)
+    return ret
 
 if __name__ == '__main__':
     # url = 'http://music.yule.sohu.com/20091109/n268066205.shtml'
@@ -91,12 +89,13 @@ if __name__ == '__main__':
     # url = 'http://xinwen.eastday.com/a/180906102137870.html?qid=news.baidu.com'
     # url = 'http://sports.ifeng.com/a/20180906/60028642_0.shtml?_zbs_baidu_news'
     url = 'http://www.xinhuanet.com/2018-09/05/c_129947770.htm'
-    html = get_html(url)
-    print(html.text)
-    soup = BeautifulSoup(html.text, 'lxml')
-    ct = re.findall('(15[0-9]{8})[^0-9]', html.text)
-    title = soup.head.title.text
-    match = fix_html(html.text)
-    ret = div(match)
-    for i in ret:
-        print(i)
+    # html = get_html(url)
+    # # soup = BeautifulSoup(html.text, 'lxml')
+    # # ct = re.findall('(15[0-9]{8})[^0-9]', html.text)
+    # # title = soup.head.title.text
+    # match = fix_html(html.text)
+    # ret = div(match)
+    # for i in ret:
+    #     print(i)
+    ret = get_ret(url)
+    print(ret)
