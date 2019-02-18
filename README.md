@@ -5,16 +5,16 @@
 # [coroutine_crawler.py](coroutine_crawler.py)
 协程爬虫，不能用于linux系统
 
-# [multiprocess_crawl.py](multiprocess_crawl.py)
+# [multiprocess_crawler.py](multiprocess_crawler.py)
 多进程爬虫，建议用于linux系统
 
-# [multithread_crawl.py](multithread_crawl.py)
+# [multithread_crawler.py](multithread_crawler.py)
 多线程爬虫，建议用于windows系统
 
-# [simulate_browser.py](simulate_browser.py)
+# [simulate_browser_crawler.py](simulate_browser_crawler.py)
 模拟浏览器爬虫，能够适用于基本全部的情况，但是速度慢
 
-# [general_crawler_by_count.py](general_crawler_by_count.py)
+# [general_extracter.py](general_extracter.py)
 通用爬虫，可用于绝大部分的网页的正文提取
 ### 效果展示
 
