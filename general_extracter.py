@@ -1,80 +1,67 @@
-"""often used to crawl news"""
+"""通用爬虫，无需解析页面即可获取正文内容，可用于绝大部分的网页的正文提取"""
 
-from common_crawler import *
-
-strip_list = [' ', '\\']  # only replace characters at the line's beginning and ending
-
-sess = requests.Session()
-
-
-def get_html(url):
-    try:
-        html = sess.get(url, headers=headers, timeout=2)
-    except:
-        logging.info('connect error: %s', url)
-        return None
-
-    a = re.search('charset=["\']?([^\s"\'; ]+)', html.text)     # get html encoding automatically
-
-    if not a:
-        html.encoding = a.group(1)
-
-    else:
-        html.encoding = 'utf8'
-    return html
+from common_crawler import Crawler
+import re
+import matplotlib.pyplot as plt
+import sys
 
 
-def fix_html(text):
-    match = re.sub(r'(?is)<pre.*?</pre>|'
-                   r'(?is)<style.*?</style>|'
-                   r'(?is)<script.*?</script>|'
-                   r'(?is)<!--.*?-->|'
-                   r'(?is)<.*?>|'
-                   r'(?is)<head.*?</head>|',
-                   '',
-                   text)  # sub areas of pre, style, script, label comment, labels
+class CommonCrawler(Crawler):
+    def do_something(self, html, **kwargs):
+        match = re.sub(r'(?is)<pre.*?</pre>|'
+                       r'(?is)<style.*?</style>|'
+                       r'(?is)<script.*?</script>|'
+                       r'(?is)<!--.*?-->|'
+                       r'(?is)<.*?>|'
+                       r'(?is)<head.*?</head>|',
+                       '',
+                       html.text)  # sub areas of pre, style, script, label comment, labels
+        match = self.fix_text(match)
+        contents = self.get_contents(match)
+        print(contents)
 
-    match = fix_text(match, repalce_list)
-    return match
+    def get_contents(self, text):
+        strip_list = [' ', '\\']  # only replace characters at the line's beginning and ending
 
+        text_list = text.split('\n')
 
-def div(match):
-    li = match.split('\n')
+        for i in range(len(text_list)):
+            for s in strip_list:
+                text_list[i] = text_list[i].strip(s)
 
-    for i in range(len(li)):
-        for j in strip_list:
-            li[i] = li[i].strip(j)
+        # count each line's words
+        count = []
+        for t in text_list:
+            nan_chinese = re.findall('[a-zA-Z0-9_-]+', t)
+            count.append(len(t) - len(nan_chinese) / 2)  # 2 English characters equals 1 chinese character
 
-    count = []
-    for i in li:
-        words = re.findall('[a-zA-Z0-9_-]+', i)
-        count.append(len(i) - len(words) / 2)       # 2 English characters equals 1 chinese character
+        kc = 2  # degree of smooth
+        smooth_count = [sum(count[i - kc:i + kc + 1]) / 5. for i in range(kc, len(count) - kc - 1)]
 
-    kc = 2
-    c = []
-    for i in range(kc, len(count) - kc - 1):
-        c.append(sum(count[i - kc:i + kc + 1]) / 5.)
+        flag = 0
+        contents = []
+        for i in range(kc, len(count) - kc - 1):
+            # where the content is start
+            if all([flag == 0, count[i] > 7, smooth_count[i - kc] > 20]):
+                flag = 1
+                contents.append('')
 
-    flag = 0
-    ret = []
-    for i in range(kc, len(count) - kc - 1):
-        if flag == 0 and count[i] > 7 and c[i - kc] > 10:
-            flag = 1
-            ret.append('')
-        if flag == 1:
-            ret[-1] += li[i]
-        if flag == 1 and count[i] < 4 and c[i - kc] < 10:
-            flag = 0
+            if flag == 1:
+                contents[-1] += text_list[i]
 
-    return ret
+            # where the content is end
+            if all([flag == 1, count[i] < 4, smooth_count[i - kc] < 10]):
+                flag = 0
 
-def get_ret(url):
-    html = get_html(url)
-    match = fix_html(html.text)
-    ret = div(match)
-    return ret
+        return contents
+
+    def plot(self, count):
+        plt.plot(range(len(count)), count)
+        plt.show()
+
 
 if __name__ == '__main__':
+    crawler = CommonCrawler()
     # url = 'http://music.yule.sohu.com/20091109/n268066205.shtml'
     # url = 'http://ent.qq.com/a/20091109/000253.htm'  #  连接多
     # url = 'https://kexue.fm/'     # 格式独特
@@ -88,14 +75,7 @@ if __name__ == '__main__':
     # url = 'https://3w.huanqiu.com/a/3458fa/7FYoUgcrac8?agt=8'
     # url = 'http://xinwen.eastday.com/a/180906102137870.html?qid=news.baidu.com'
     # url = 'http://sports.ifeng.com/a/20180906/60028642_0.shtml?_zbs_baidu_news'
-    url = 'http://www.xinhuanet.com/2018-09/05/c_129947770.htm'
-    # html = get_html(url)
-    # # soup = BeautifulSoup(html.text, 'lxml')
-    # # ct = re.findall('(15[0-9]{8})[^0-9]', html.text)
-    # # title = soup.head.title.text
-    # match = fix_html(html.text)
-    # ret = div(match)
-    # for i in ret:
-    #     print(i)
-    ret = get_ret(url)
-    print(ret)
+    url = 'http://www.xinhuanet.com/politics/xxjxs/2019-09/16/c_1125001493.htm'
+    if len(sys.argv) > 2:
+        url = sys.argv[1]
+    crawler.crawl(url, timeout=2)

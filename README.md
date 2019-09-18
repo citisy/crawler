@@ -1,33 +1,36 @@
-# [common_crawler.py](common_crawler.py)
-一般的爬虫。<br>
-如果用多线程或多进程频繁访问同一个网站，会对其造成很多的困扰，加大了ip被封的可能性，其实速度是下降，既不利人也不利己，所以建议使用这种爬虫就满足基本需求了
+###  [common_crawler.py](common_crawler.py) 
+普通的网络爬虫。
 
-# [coroutine_crawler.py](coroutine_crawler.py)
-协程爬虫，不能用于linux系统
+简单的get请求，单线程爬取。
 
-# [multiprocess_crawler.py](multiprocess_crawler.py)
-多进程爬虫，建议用于linux系统
+###  [crawler_by_multithread.py](crawler_by_multithread.py) 
 
-# [multithread_crawler.py](multithread_crawler.py)
-多线程爬虫，建议用于windows系统
+多线程爬虫。
 
-# [simulate_browser_crawler.py](simulate_browser_crawler.py)
-模拟浏览器爬虫，能够适用于基本全部的情况，但是速度慢
+python中的多线程是虚假的多线程。由于python的GIL(Global Interpreter Lock)机制，同一时间只能运行一条线程，所以对于CPU密集型任务，多线程运行效果不如单线程。但对于爬虫这种I/O密集型任务，多线程的效果还是不错的。
 
-# [general_extracter.py](general_extracter.py)
-通用爬虫，可用于绝大部分的网页的正文提取
-### 效果展示
+###  [crawler_by_coroutine.py](crawler_by_coroutine.py) 
 
-新闻链接：[习主席的12个小时](http://www.xinhuanet.com/2018-09/05/c_129947770.htm)
+协程爬虫。
+
+解决python的GIL问题。本质上也是多线程，但只开了一条线程，程序内部自行对线程资源进行调度。
+
+###  [crawler_by_multiprocess.py](crawler_by_multiprocess.py) 
+
+多进程爬虫。
+
+不建议在Windows下使用python的多进程。因为Windows下没有fork机制，是虚假的多进程。
+
+### [general_extracter.py](general_extracter.py)
+通用文本抽取器。
+
+无需分析页面结构，即可对源html抽取正文内容。
+
+#### 效果展示
 
 网页截图： 
-![image](img/printscreen.png)
+![screen](img\screen.png)
 
 提取结果：
-```text
->>> ret = get_ret(url)
->>> ret
->>> http://vod.xinhuanet.com/v/vod.html?vid=534647【简介】9月4日，2018年中非合作论坛北京峰会闭幕。这一天，习主席参加了多少场外事活动？新华社“第1视点”为你呈现。
-```
 
-提取出来的文本中的url是视频的url，后期根据需要可以正则去掉
+![screen2](img\screen2.png)
