@@ -24,7 +24,6 @@ class Crawler():
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
         }
 
-
     def fix_text(self, text, repalce_list=(' ', '_', '\r', '\t', '\u3000', '百度图片搜索', '百度百科')):
         # replace escape character
         text = (text.replace("&quot;", "\"").replace("&ldquo;", "“").replace("&rdquo;", "”")
@@ -80,8 +79,23 @@ class Crawler():
                 self.save_html(html.text, 'html_file/%f.html' % time.time())
 
     def save_html(self, text, save_path):
+        logging.info('saving: %s' % save_path)
         with open(save_path, 'w', encoding='utf8') as f:
             f.write(text)
+
+    def save(self, stream, save_path):
+        logging.info('saving: %s' % save_path)
+        with open(save_path, 'wb') as f:
+            f.write(stream)
+
+    def download_big_file(self, url, save_path, chunk_size=1024):
+        with self.session.get(url, stream=True) as r:
+            content_size = int(r.headers['content-length'])
+            print(content_size)
+            logging.info('saving: %s, total size: %f Mb' % (save_path, content_size / 1024))
+            with open(save_path, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=chunk_size):
+                    f.write(chunk)
 
     def crawl(self, url, **kwargs):
         html = self.get_html(url, **kwargs)

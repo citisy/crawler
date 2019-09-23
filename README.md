@@ -21,7 +21,18 @@ python中的多线程是虚假的多线程。由于python的GIL(Global Interpret
 
 不建议在Windows下使用python的多进程。因为Windows下没有fork机制，是虚假的多进程。
 
+###  [crawler_by_simulate_browser.py](crawler_by_simulate_browser.py)
+
+模拟浏览器爬虫。
+
+真正意义上的万能爬虫方法。但由于要渲染js，故爬虫速度较慢。
+
+### [crawl_media.py](crawl_media.py) 
+
+一些爬取媒体流文件的方法。
+
 ### [general_extracter.py](general_extracter.py)
+
 通用文本抽取器。
 
 无需分析页面结构，即可对源html抽取正文内容。
@@ -29,8 +40,8 @@ python中的多线程是虚假的多线程。由于python的GIL(Global Interpret
 #### 效果展示
 
 网页截图： 
-![screen](img\screen.png)
+![screen](img/screen.png)
 
 提取结果：
 
-![screen2](img\screen2.png)
+![screen2](img/screen2.png)

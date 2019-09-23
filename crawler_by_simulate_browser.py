@@ -1,4 +1,4 @@
-"""模拟浏览器抓取百度新闻，万能爬虫手段，唯一缺点就是慢
+"""模拟浏览器抓取百度新闻，堪称万能爬虫手段，唯一缺点就是慢，因为要渲染js
 百度新闻的页面"""
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -11,7 +11,8 @@ from general_extracter import Crawler
 
 class SimulateBrowser(Crawler):
     def __init__(self):
-        chrome = './chromedriver.exe'
+        self.replace_name = ['|', '<', '>', '/', '\\', '?', '*', ':', '"']
+        chrome = 'chromedriver'
         chrome_options = webdriver.ChromeOptions()
         chrome_options.headless = True  # quite mode
         self.browser = webdriver.Chrome(chrome, chrome_options=chrome_options)
@@ -32,9 +33,12 @@ class SimulateBrowser(Crawler):
             if crawl_url[:4] != 'http':
                 continue
 
-            logging.info('        %s', crawl_url)
             html = self.get_html(crawl_url)
-            self.save_html(html, 'html_file/%f.html' % time.time())
+            title = self.browser.title
+            for r in self.replace_name:
+                title = title.replace(r, '')
+            self.save_html(html, 'html_file/%s.html' % title)
+        self.browser.quit()     # quit browser
 
     def get_html(self, url, **kwargs):
         self.browser.get(url)
