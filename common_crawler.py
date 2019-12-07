@@ -91,8 +91,7 @@ class Crawler():
     def download_big_file(self, url, save_path, chunk_size=1024):
         with self.session.get(url, stream=True) as r:
             content_size = int(r.headers['content-length'])
-            print(content_size)
-            logging.info('saving: %s, total size: %f Mb' % (save_path, content_size / 1024))
+            logging.info('saving: %s, total size: %f Mb' % (save_path, content_size / 1024 / 1024))
             with open(save_path, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=chunk_size):
                     f.write(chunk)

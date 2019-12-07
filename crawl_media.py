@@ -2,6 +2,8 @@ from common_crawler import Crawler
 import re
 import time
 import os
+from urllib.parse import urlparse
+from tqdm import tqdm
 
 
 class CrawlStaticStream(Crawler):
@@ -38,25 +40,33 @@ class CrawlDynamicStream(Crawler):
     爬取直播流文件难点在于如何获取.m3u8文件。"""
 
     def do_something(self, html, **kwargs):
-        self.save(html.content, 'video/index.m3u8')
+        if hasattr(self, 'm3u8_save_path'):
+            self.save(html.content, self.m3u8_save_path)
+
         text = html.text
 
-        if not os.path.exists('video/cache'):
-            os.mkdir('video/cache')
-
         i = 0
+        ts_urls = []
+        home_url = urlparse(url).scheme + '://' + urlparse(url).netloc
         for line in text.split('\n'):
-            if line.startswith('http'):
-                self.download_big_file(line, 'video/cache/{:0>5d}.ts'.format(i))
+            if not line.startswith('#'):
+                if line.startswith('http'):
+                    line = line
+                elif line.startswith('/'):
+                    line = home_url + line
+                else:
+                    line = os.path.split(url)[0] + '/' + line
+                ts_urls.append(line)
                 i += 1
 
             if line == '#EXT-X-ENDLIST':
                 break
 
-        with open('video/new.ts', 'wb') as f:
-            for file in os.listdir('video/cache'):
-                with open(os.path.join('video/cache', file), 'rb') as f1:
-                    f.write(f1.read())
+        if hasattr(self, 'video_save_path'):
+            with open(self.video_save_path, 'wb') as f:
+                for ts_url in tqdm(ts_urls):
+                    ts = self.session.get(ts_url)
+                    f.write(ts.content)
 
 
 if __name__ == '__main__':
@@ -65,5 +75,13 @@ if __name__ == '__main__':
     # crawler.crawl(url)
 
     crawler = CrawlDynamicStream()
-    url = 'https://valipl.cp31.ott.cibntv.net/657344BC5A13A717B1EAD3FDC/03000600005C6B7F4EF8D76011BA6AF2A6E978-5325-4768-BCED-3C6668DB0AC6-1-114.m3u8?ccode=0502&duration=1419&expire=18000&psid=e2b2b213da82530ee43969f5cbb8f9e6&ups_client_netip=3da04502&ups_ts=1569220919&ups_userid=&utid=JcbvFXIlWxICAT2gRQLMSpoT&vid=XNTQwMTgxMTE2&vkey=A98d3dfab78184f8f86b8a6b24f9269dc&sm=1&operate_type=1&bc=2&sp=400'
+
+    """todo:
+    1. 字幕文件抓取
+    2. 批量抓取m3u8列表"""
+
+    # 火影忍者第一集
+    url = 'https://valipl.cp31.ott.cibntv.net/6975B808BDD4D71FB961D26C4/03000600005D89BF8AF8D76011BA6AFC417C00-AB9B-4585-B00D-9D19D8447341-1-114.m3u8?ccode=0502&duration=1419&expire=18000&psid=212015f63154d3b142ba81e8b57ec12c&ups_client_netip=671b1a91&ups_ts=1575719129&ups_userid=&utid=2JYPFrwZDksCAXnuS%2FGJSivn&vid=XNTQwMTgxMTE2&vkey=A55d792395482b64a42af5c50560ab916&sm=1&operate_type=1&dre=u37&si=28&bc=2'
+    crawler.m3u8_save_path = 'video/index.m3u8'
+    crawler.video_save_path = 'video/NARUTO_1.ts'
     crawler.crawl(url)
