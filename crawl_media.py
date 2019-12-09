@@ -78,7 +78,8 @@ if __name__ == '__main__':
 
     """todo:
     1. 字幕文件抓取
-    2. 批量抓取m3u8列表"""
+    2. 批量抓取m3u8列表
+    3. m3u8链接会过期，目测是链接中带有时间戳信息"""
 
     # 火影忍者第一集
     url = 'https://valipl.cp31.ott.cibntv.net/6975B808BDD4D71FB961D26C4/03000600005D89BF8AF8D76011BA6AFC417C00-AB9B-4585-B00D-9D19D8447341-1-114.m3u8?ccode=0502&duration=1419&expire=18000&psid=212015f63154d3b142ba81e8b57ec12c&ups_client_netip=671b1a91&ups_ts=1575719129&ups_userid=&utid=2JYPFrwZDksCAXnuS%2FGJSivn&vid=XNTQwMTgxMTE2&vkey=A55d792395482b64a42af5c50560ab916&sm=1&operate_type=1&dre=u37&si=28&bc=2'
