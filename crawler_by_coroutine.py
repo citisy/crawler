@@ -2,7 +2,7 @@
 coroutine is a thread essentially"""
 import gevent
 from gevent import monkey
-from common_crawler import Crawler
+from basic_crawler import Crawler
 import sys
 
 sys.setrecursionlimit(1000000)
@@ -10,8 +10,8 @@ monkey.patch_all()
 
 
 class myCrawler(Crawler):
-    def do_something(self, html, **kwargs):
-        print(html.text)
+    def run(self, response, *args, **kwargs):
+        print(response.text)
 
 
 def normal_coroutine():
@@ -20,7 +20,7 @@ def normal_coroutine():
     urls = ["http://ip-api.com/json/%s" % ip for ip in ips]
     coroutine = []
     for url in urls:
-        coroutine.append(gevent.spawn(crawler.crawl, url, ))
+        coroutine.append(gevent.spawn(crawler.start4url, url, ))
 
     gevent.joinall(coroutine)
 

@@ -3,24 +3,26 @@
 """
 
 from multiprocessing import Process, Pool  # use Queue in multiprocessing, neither import queue
-from common_crawler import Crawler
+from basic_crawler import Crawler
 import sys
 
 sys.setrecursionlimit(1000000)  # todo: RecursionError:maximum recursion depth exceeded
 
 
 class myCrawler(Crawler):
-    def do_something(self, html, **kwargs):
-        print(html.text)
+    def run(self, response, *args, **kwargs):
+        print(response.text)
 
 
 def sub_process(urls):
+    """多进程任务"""
     crawler = myCrawler()
     for url in urls:
-        crawler.crawl(url)
+        crawler.start4url(url)
 
 
 def use_pool():
+    """调用进程池"""
     urls = [["http://ip-api.com/json/12.13.%d.%d" % (i, j) for i in range(10, 14)] for j in range(10, 20)]
     pool = Pool(5)
     for url in urls:
@@ -31,6 +33,7 @@ def use_pool():
 
 
 def normal_multiprocess():
+    """主进程"""
     urls = [["http://ip-api.com/json/12.13.%d.%d" % (i, j) for i in range(10, 14)] for j in range(10, 20)]
     process = []
     for url in urls:

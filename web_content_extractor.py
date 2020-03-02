@@ -1,13 +1,19 @@
-"""通用爬虫，无需解析页面即可获取正文内容，可用于绝大部分的网页的正文提取"""
-
-from common_crawler import Crawler
 import re
-import matplotlib.pyplot as plt
 import sys
 
 
-class CommonCrawler(Crawler):
-    def do_something(self, html, **kwargs):
+class Extractor:
+    """通用爬虫，无需解析页面即可获取正文内容，可用于绝大部分的网页的正文提取"""
+
+    def start4url(self, *args, **kwargs):
+        from basic_crawler import Crawler
+
+        crawler = Crawler()
+        response = crawler.start4url(url, *args, **kwargs)
+        html = crawler.fix_text(response.text)
+        return self.start4html(html)
+
+    def start4html(self, html: str):
         match = re.sub(r'(?is)<pre.*?</pre>|'
                        r'(?is)<style.*?</style>|'
                        r'(?is)<script.*?</script>|'
@@ -15,10 +21,9 @@ class CommonCrawler(Crawler):
                        r'(?is)<.*?>|'
                        r'(?is)<head.*?</head>|',
                        '',
-                       html.text)  # sub areas of pre, style, script, label comment, labels
-        match = self.fix_text(match)
+                       html)  # sub areas of pre, style, script, label comment, labels
         contents = self.get_contents(match)
-        print(contents)
+        return contents
 
     def get_contents(self, text):
         strip_list = [' ', '\\']  # only replace characters at the line's beginning and ending
@@ -55,13 +60,9 @@ class CommonCrawler(Crawler):
 
         return contents
 
-    def plot(self, count):
-        plt.plot(range(len(count)), count)
-        plt.show()
-
 
 if __name__ == '__main__':
-    crawler = CommonCrawler()
+    crawler = Extractor()
     # url = 'http://music.yule.sohu.com/20091109/n268066205.shtml'
     # url = 'http://ent.qq.com/a/20091109/000253.htm'  #  连接多
     # url = 'https://kexue.fm/'     # 格式独特
@@ -78,4 +79,5 @@ if __name__ == '__main__':
     url = 'http://www.xinhuanet.com/politics/xxjxs/2019-09/16/c_1125001493.htm'
     if len(sys.argv) > 2:
         url = sys.argv[1]
-    crawler.crawl(url, timeout=2)
+    contents = crawler.start4url(url, timeout=2)
+    print(contents)

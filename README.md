@@ -1,7 +1,6 @@
-###  [common_crawler.py](common_crawler.py) 
-普通的网络爬虫。
+###  [basic_crawler.py](basic_crawler.py) 
 
-简单的get请求，单线程爬取。
+自定义的爬虫框架。
 
 ###  [crawler_by_multithread.py](crawler_by_multithread.py) 
 
@@ -31,7 +30,7 @@ python中的多线程是虚假的多线程。由于python的GIL(Global Interpret
 
 一些爬取媒体流文件的方法。
 
-### [general_extracter.py](general_extracter.py)
+### [web_content_extractor.py](web_content_extractor.py)
 
 通用文本抽取器。
 
@@ -39,7 +38,8 @@ python中的多线程是虚假的多线程。由于python的GIL(Global Interpret
 
 #### 效果展示
 
-网页截图： 
+网页截图：
+ 
 ![screen](img/screen.png)
 
 提取结果：
