@@ -5,27 +5,36 @@ import sys
 class Extractor:
     """通用爬虫，无需解析页面即可获取正文内容，可用于绝大部分的网页的正文提取"""
 
-    def start4url(self, *args, **kwargs):
-        from basic_crawler import Crawler
+    def fix_text(self, text, replace_list=None):
+        # replace escape character
+        text = (text.replace("&quot;", "\"").replace("&ldquo;", "“").replace("&rdquo;", "”")
+                .replace("&middot;", "·").replace("&#8217;", "’").replace("&#8220;", "“")
+                .replace("&#8221;", "”").replace("&#8212;", "——").replace("&hellip;", "…")
+                .replace("&#8226;", "·").replace("&#40;", "(").replace("&#41;", ")")
+                .replace("&#183;", "·").replace("&amp;", "&").replace("&bull;", "·")
+                .replace("&lt;", "<").replace("&#60;", "<").replace("&gt;", ">")
+                .replace("&#62;", ">").replace("&nbsp;", "").replace("&#160;", " ")
+                .replace("&tilde;", "~").replace("&mdash;", "—").replace("&copy;", "@")
+                .replace("&#169;", "@").replace("♂", ""))
 
-        crawler = Crawler()
-        response = crawler.start4url(url, *args, **kwargs)
-        html = crawler.fix_text(response.text)
-        return self.start4html(html)
+        replace_list = replace_list or (' ', '_', '\r', '\t', '\u3000')
+        for i in replace_list:
+            text = text.replace(i, '')
 
-    def start4html(self, html: str):
-        match = re.sub(r'(?is)<pre.*?</pre>|'
-                       r'(?is)<style.*?</style>|'
-                       r'(?is)<script.*?</script>|'
-                       r'(?is)<!--.*?-->|'
-                       r'(?is)<.*?>|'
-                       r'(?is)<head.*?</head>|',
-                       '',
-                       html)  # sub areas of pre, style, script, label comment, labels
-        contents = self.get_contents(match)
-        return contents
+        return text
 
-    def get_contents(self, text):
+    def extract(self, html: str,
+                smooth_windows=5, start_eps=20, end_eps=10) -> list:
+        html = self.fix_text(html)
+        text = re.sub(r'(?is)<pre.*?</pre>|'
+                      r'(?is)<style.*?</style>|'
+                      r'(?is)<script.*?</script>|'
+                      r'(?is)<!--.*?-->|'
+                      r'(?is)<.*?>|'
+                      r'(?is)<head.*?</head>|',
+                      '',
+                      html)  # sub areas of pre, style, script, label comment, labels
+
         strip_list = [' ', '\\']  # only replace characters at the line's beginning and ending
 
         text_list = text.split('\n')
@@ -34,35 +43,38 @@ class Extractor:
             for s in strip_list:
                 text_list[i] = text_list[i].strip(s)
 
-        # count each line's words
+        # 计算每一行的单词数
         count = []
         for t in text_list:
             nan_chinese = re.findall('[a-zA-Z0-9_-]+', t)
-            count.append(len(t) - len(nan_chinese) / 2)  # 2 English characters equals 1 chinese character
+            count.append(len(t) - len(nan_chinese) / 2.)  # 2个英文字符换算成1个中文字符
 
-        kc = 2  # degree of smooth
-        smooth_count = [sum(count[i - kc:i + kc + 1]) / 5. for i in range(kc, len(count) - kc - 1)]
+        # 段落平滑处理，防止过于尖锐
+        smooth_count = [sum(count[i - smooth_windows:i + smooth_windows + 1]) / smooth_windows
+                        for i in range(smooth_windows, len(count) - smooth_windows - 1)]
 
         flag = 0
         contents = []
-        for i in range(kc, len(count) - kc - 1):
-            # where the content is start
-            if all([flag == 0, count[i] > 7, smooth_count[i - kc] > 20]):
+        for i in range(smooth_windows, len(count) - smooth_windows - 1):
+            # 一段文字开始的标准，这个标准应该是宽容的
+            if all([flag == 0, count[i] > start_eps/2, smooth_count[i - smooth_windows] > start_eps]):
                 flag = 1
                 contents.append('')
 
             if flag == 1:
-                contents[-1] += text_list[i]
+                if text_list[i]:
+                    contents[-1] += text_list[i] + '\n'
 
-            # where the content is end
-            if all([flag == 1, count[i] < 4, smooth_count[i - kc] < 10]):
+            # 一段文字结束的标准，这个标准应该是严格的
+            if all([flag == 1, count[i] < end_eps/2, smooth_count[i - smooth_windows] < end_eps]):
                 flag = 0
 
         return contents
 
 
 if __name__ == '__main__':
-    crawler = Extractor()
+    from basic_crawler import Crawler
+
     # url = 'http://music.yule.sohu.com/20091109/n268066205.shtml'
     # url = 'http://ent.qq.com/a/20091109/000253.htm'  #  连接多
     # url = 'https://kexue.fm/'     # 格式独特
@@ -77,7 +89,14 @@ if __name__ == '__main__':
     # url = 'http://xinwen.eastday.com/a/180906102137870.html?qid=news.baidu.com'
     # url = 'http://sports.ifeng.com/a/20180906/60028642_0.shtml?_zbs_baidu_news'
     url = 'http://www.xinhuanet.com/politics/xxjxs/2019-09/16/c_1125001493.htm'
+
     if len(sys.argv) > 2:
         url = sys.argv[1]
-    contents = crawler.start4url(url, timeout=2)
-    print(contents)
+
+    extractor = Extractor()
+    crawler = Crawler()
+    contents = extractor.extract(crawler.start4url(url).text)
+
+    for content in contents:
+        print(content)
+        print('--------')

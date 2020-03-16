@@ -1,5 +1,4 @@
 import requests
-from bs4 import BeautifulSoup
 import re
 import time
 import logging
@@ -7,7 +6,6 @@ import random
 import traceback
 import json
 import os
-from tqdm import tqdm
 
 logging.basicConfig(
     level=logging.INFO,
@@ -84,24 +82,6 @@ class Crawler:
         self.session.headers.update(self.headers)
         self.cache_dic = dict()
 
-    def fix_text(self, text, replace_list=None):
-        # replace escape character
-        text = (text.replace("&quot;", "\"").replace("&ldquo;", "“").replace("&rdquo;", "”")
-                .replace("&middot;", "·").replace("&#8217;", "’").replace("&#8220;", "“")
-                .replace("&#8221;", "\”").replace("&#8212;", "——").replace("&hellip;", "…")
-                .replace("&#8226;", "·").replace("&#40;", "(").replace("&#41;", ")")
-                .replace("&#183;", "·").replace("&amp;", "&").replace("&bull;", "·")
-                .replace("&lt;", "<").replace("&#60;", "<").replace("&gt;", ">")
-                .replace("&#62;", ">").replace("&nbsp;", "").replace("&#160;", " ")
-                .replace("&tilde;", "~").replace("&mdash;", "—").replace("&copy;", "@")
-                .replace("&#169;", "@").replace("♂", ""))
-
-        replace_list = replace_list or (' ', '_', '\r', '\t', '\u3000')
-        for i in replace_list:
-            text = text.replace(i, '')
-
-        return text
-
     def save_as_text(self, text, save_path):
         logging.info(f'saving: {save_path}')
         with open(save_path, 'w', encoding='utf8') as f:
@@ -165,9 +145,7 @@ class Crawler:
         """
         response = self.get_response(url, *args, **kwargs)
         if response:
-            self.run(response, *args, **kwargs)
-
-        return response
+            return self.run(response, *args, **kwargs)
 
     @add_try()
     @add_callback()
@@ -189,7 +167,7 @@ class Crawler:
         except KeyboardInterrupt:
             exit(1)
 
-    def run(self, response: requests.models.Response, *args, **kwargs):
+    def run(self, response, *args, **kwargs):
         """do something after get the html
         :param response: 开始抓取的url返回的响应
         :param args: 自定义的参数
@@ -218,25 +196,4 @@ class Crawler:
         return self.get_response(url, *args, **kwargs)
 
 
-class BaiduCrawler(Crawler):
-    def run(self, response, *args, **kwargs):
-        soup = BeautifulSoup(response.text, 'lxml')
-        crawl_list = soup.find_all('h3')
-        if not crawl_list:
-            logging.info('empty crawl list  %s ', response.url)
-            return
 
-        for crawl in tqdm(crawl_list):
-            url = crawl.find('a')['href']
-            self.repeat_crawl(url, *args, **kwargs)
-
-
-if __name__ == '__main__':
-    """普通的网络爬虫，简单的get请求，单线程爬取，利用关键词爬取百度收索词条"""
-    crawler = BaiduCrawler()
-    words = ['葡萄', '苹果', '雪梨', '黑莓']
-    base_url = 'http://www.baidu.com/s?wd=%s&tn=monline_dg&ie=utf-8'
-    for word in words:
-        logging.info('crawling words: %s', word)
-        url = base_url % word
-        crawler.start4url(url, timeout=2)
