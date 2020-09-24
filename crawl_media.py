@@ -3,9 +3,11 @@ import re
 import os
 from urllib.parse import urlparse
 from tqdm import tqdm
+from Crypto.Cipher import AES
 
 
 class StaticStreamCrawler(Crawler):
+    """静态流文件抓取"""
     @add_delay()
     def repeat_crawl(self, url, *args, **kwargs):
         video_save_path = args[0] if len(args) > 0 else None
@@ -13,6 +15,7 @@ class StaticStreamCrawler(Crawler):
 
 
 class DynamicStreamCrawler(Crawler):
+    """m3u8视频文件抓取"""
     """HLS(HTTP Live Streaming)是一个由苹果公司提出的基于HTTP的流媒体网络传输协议。
     m3u即为一种比较经典的播放标准，其中编码格式为utf-8即为m3u8标准
     m3u8具体格式含义：
@@ -55,51 +58,45 @@ class DynamicStreamCrawler(Crawler):
             if line == '#EXT-X-ENDLIST':
                 break
 
+        if 'EXT-X-KEY' in text:
+            key_uri = re.findall('URI="(.+)"', text)[0]
+            key_url = os.path.split(response.url)[0] + '/' + key_uri
+            key = self.session.get(key_url).content
+            aes = AES.new(key, AES.MODE_CBC, key)
+
+        if os.path.exists('cache_url'):     # 从上次下载失败的地方重新下载
+            with open('cache_url', 'r', encoding='utf8') as f:
+                cache_url = f.read().split('\n')
+            video_output_file = open(video_save_path, 'ab')
+        else:
+            cache_url = []
+            video_output_file = open(video_save_path, 'wb')
+
         if video_save_path:
-            with open(video_save_path, 'wb') as f:
+            try:
                 for ts_url in tqdm(ts_urls):
+                    if ts_url in cache_url:
+                        continue
+
                     ts = self.repeat_crawl(ts_url, *args, **kwargs)
-                    f.write(ts.content)
 
+                    if 'EXT-X-KEY' in text:
+                        video_output_file.write(aes.decrypt(ts.content))
+                    else:
+                        video_output_file.write(ts.content)
 
-class ku6_Crawler(StaticStreamCrawler):
-    def run(self, response, *args, **kwargs):
-        urls = re.findall('<a class="video-image-warp" target="_blank" href="(.*?)">', response.text)
-        for url in tqdm(urls):
-            self.repeat_crawl(url, *args, **kwargs)
+                    cache_url.append(ts_url)
 
-    @add_delay()
-    def repeat_crawl(self, url, *args, **kwargs):
-        video_save_root = args[0] if len(args) > 0 else None
-        home_url = args[1] if len(args) > 1 else None
+                video_output_file.close()
 
-        if url.startswith('/video/'):
-            if home_url:
-                url = home_url + url
-            response = self.get_repeat_response(url, *args, **kwargs)
-            video_urls = re.findall('<source src="(.*?)" type="video/mp4">', response.text) or re.findall(
-                'type: "video/mp4", src: "(.*?)"', response.text)
-            if video_urls:
-                video_url = video_urls[0]
-                title = re.findall('document.title = "(.*?)"', response.text)[0]
-                self.save_as_big_file(video_url, f'{video_save_root}/{title}.mp4')
+                if os.path.exists('cache_url'):
+                    os.remove('cache_url')
 
+            except Exception:  # 程序失败时，缓存已经下载的url，以便后面重新下载
+                with open('cache_url', 'w', encoding='utf8') as f:
+                    f.write('\n'.join(cache_url))
 
-if __name__ == '__main__':
-    # crawler = ku6_Crawler()
-    # url = 'https://www.ku6.com/index'
-    # home_url = 'https://www.ku6.com'
-    # crawler.start4url(url, 'video_', home_url)
+                video_output_file.close()
 
-    """todo:
-    1. 字幕文件抓取
-    2. 批量抓取m3u8列表
-    3. m3u8链接会过期，目测是链接中带有时间戳信息"""
-
-    # crawler = CrawlDynamicStream()
-    # with open('m3u8_list4', 'r', encoding='utf8') as f:
-    #     for i, url in enumerate(f.read().split('\n')):
-    #         if i < 18:
-    #             continue
-    #         logging.info(i)
-    #         crawler.start4url(url, 'video/index.m3u8', 'video/%d.ts' % i, timeout=10)
+                traceback.print_exc()
+                exit(1)

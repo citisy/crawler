@@ -3,35 +3,29 @@
 it means that only one thread run at the same time,
 so it used to run in I/O dense, such as crawl"""
 from concurrent.futures import ThreadPoolExecutor
-import threading
-from basic_crawler import Crawler
+from basic_crawler import *
+import queue
 
 
-class myCrawler(Crawler):
-    def run(self, response, *args, **kwargs):
-        print(response.text)
-
-
-def use_pool():
+class CrawlerByPool(Crawler):
     """调用线程池"""
-    crawler = myCrawler()
-    ips = ['12.13.14.%d' % (ip + 1) for ip in range(30)]
-    urls = ["http://ip-api.com/json/%s" % ip for ip in ips]
-    pool = ThreadPoolExecutor(max_workers=10)
-    pool.map(crawler.start4url, urls)
+    def run(self, urls, *args, **kwargs):
+        self.q = queue.Queue()
+        pool = ThreadPoolExecutor(max_workers=10)
+        pool.map(self.repeat_crawl, urls)
 
+        while not self.q.empty():
+            print(self.q.get())
 
-def normal_multithread():
-    """主线程
-    todo: Connection pool is full, discarding connection: ip-api.com"""
-    crawler = myCrawler()
-    ips = ['12.13.14.%d' % (ip + 1) for ip in range(30)]
-    urls = ["http://ip-api.com/json/%s" % ip for ip in ips]
-    for url in urls:
-        t = threading.Thread(target=crawler.start4url, args=(url,))
-        t.start()
+    @add_delay()
+    def repeat_crawl(self, url: str, *args, **kwargs):
+        r = self.get_response(url)
+        self.q.put(r)
 
 
 if __name__ == '__main__':
-    normal_multithread()
-    # use_pool()
+    ips = ['12.13.14.%d' % (ip + 1) for ip in range(30)]
+    urls = ["http://ip-api.com/json/%s" % ip for ip in ips]
+
+    crawler = CrawlerByPool()
+    crawler.run(urls)

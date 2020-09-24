@@ -11,6 +11,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='[ %(asctime)s ] %(message)s',
 )
+DEBUG = False
 
 
 def add_try(count=2,
@@ -28,7 +29,7 @@ def add_try(count=2,
                     logging.error(e)
 
                     if error_message:
-                        logging.info(error_message)
+                        logging.error(error_message)
 
                     logging.info(f'{i}th try!')
                     time.sleep(wait)
@@ -50,17 +51,20 @@ def add_delay(secs=1, thresold=0.2):
     return wrap2
 
 
-def add_callback(callback=None):
+def add_callback(callback=None, callback_args=None):
     """程序遇到异常后，不会退出，打印异常信息后继续往下执行"""
 
     def wrap2(func):
         def wrap(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
+            except KeyboardInterrupt:
+                exit(1)
             except:
                 if callback:
-                    callback()
-                traceback.print_exc()
+                    callback(callback_args)
+                if DEBUG:
+                    traceback.print_exc()
 
         return wrap
 
@@ -69,7 +73,6 @@ def add_callback(callback=None):
 
 class Crawler:
     """自定义的爬虫框架"""
-
     def __init__(self):
         self.session = requests.Session()
         self.headers = {
@@ -109,6 +112,7 @@ class Crawler:
         collection.update_one(js)
 
     def cache_by_json(self, path=None, root=None):
+        """加载已经爬取的json，避免重复爬取"""
         if path:
             logging.info(f'saving: {path}')
             try:
@@ -138,7 +142,9 @@ class Crawler:
         return title
 
     def start4url(self, url, *args, **kwargs):
-        """
+        """推荐任务开始入口，从一个包含url列表的url页面开始爬取网站，应包含页面解析获取url操作
+        默认调用 get_response() 获取响应，解析获取url列表后调用 run() 方法下达循环抓取任务
+        请根据需求继承并改写该函数
         :param url: 开始抓取的页面
         :param args: 自定义的参数
         :param kwargs: 网络请求用到的参数
@@ -147,53 +153,68 @@ class Crawler:
         if response:
             return self.run(response, *args, **kwargs)
 
-    @add_try()
-    @add_callback()
-    def get_response(self, url: str, *args, **kwargs) -> requests.models.Response:
-        try:
-            response = self.session.get(url, **kwargs)
-            if response.status_code != 200:
-                logging.error('url: {} status code is {}'.format(response.url, response.status_code))
-                return
+    def start4file(self, path=None, root=None, *args, **kwargs):
+        if path:
+            with open(path, 'r', encoding='utf8') as f:
+                urls = f.read().split('\n')
+                return self.run(urls, *args, **kwargs)
+        if root:
+            urls = []
+            for file in os.listdir(root):
+                path = os.path.join(root, file)
+                with open(path, 'r', encoding='utf8') as f:
+                    urls += f.read().split('\n')
 
-            a = re.search('charset=["\']?([^\s"\'; ]+)', response.text)  # get html encoding automatically
+            return self.run(urls, *args, **kwargs)
 
-            if a:
-                response.encoding = a.group(1)
-            else:
-                response.encoding = 'utf8'
-            return response
-
-        except KeyboardInterrupt:
-            exit(1)
-
-    def run(self, response, *args, **kwargs):
-        """do something after get the html
-        :param response: 开始抓取的url返回的响应
+    def run(self, obj, *args, **kwargs):
+        """推荐任务开始，输入一个包含url列表的元素，例如一个list型的url列表，一个包含url列表的文件、一个包含url列表的页面等
+        然后从中解析得到url列表，进行循环抓取工作
+        特别地，解析得到url列表的工作也已封装成 start4*() 系列函数，这些函数会默认条用 run() ，并传入一个list型的url列表。
+        请根据需求继承并改写该函数
+        :param obj: 开始抓取的url返回的响应
         :param args: 自定义的参数
         :param kwargs: 网络请求时用到的参数
-        :return:
         """
+        return obj
+
+    @add_try()
+    @add_callback(lambda x: logging.error('Something wrong while crawling!'))
+    def get_response(self, url: str, *args, **kwargs) -> requests.models.Response or None:
+        """获取一般页面html的方法
+        默认有自动探测网页是否可以正常访问、自动探测网页encoding、请求失败重试3次，连接超时失败时程序不中断退出等优化配置
+        :param args: 自定义的参数
+        :param kwargs: 网络请求时用到的参数
+        """
+        response = self.session.get(url, **kwargs)
+
+        response.raise_for_status()
+
+        a = re.search('charset=["\']?([^\s"\'; ]+)', response.text)  # get html encoding automatically
+
+        if a:
+            response.encoding = a.group(1)
+        else:
+            response.encoding = 'utf8'
+
         return response
 
     @add_delay()
     def repeat_crawl(self, url: str, *args, **kwargs):
-        """
+        """解析重复抓取同一类型页面的方法
+        默认添加延时0.2，但无页面解析方法，需根据需求继承重写该方法
+        默认调用 get_repeat_response() 获取重复页面的html
         :param url: 需要抓取的url
         :param args: 自定义的参数
         :param kwargs: 网络请求时用到的参数
-        :return: default return get_repeat_html()
         """
         return self.get_repeat_response(url, *args, **kwargs)
 
     def get_repeat_response(self, url: str, *args, **kwargs):
-        """
+        """重复获取同一类型页面html的方法
+        默认调用 get_response() 获取页面html
         :param url: 需要抓取的url
         :param args: 自定义的参数
         :param kwargs: 网络请求时用到的参数
-        :return: default return get_html()
         """
         return self.get_response(url, *args, **kwargs)
-
-
-

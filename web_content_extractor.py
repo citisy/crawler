@@ -26,14 +26,14 @@ class Extractor:
     def extract(self, html: str,
                 smooth_windows=5, start_eps=20, end_eps=10) -> list:
         html = self.fix_text(html)
-        text = re.sub(r'(?is)<pre.*?</pre>|'
-                      r'(?is)<style.*?</style>|'
-                      r'(?is)<script.*?</script>|'
-                      r'(?is)<!--.*?-->|'
-                      r'(?is)<.*?>|'
-                      r'(?is)<head.*?</head>|',
+        text = re.sub(r'<pre.*?</pre>|'
+                      r'<style.*?</style>|'
+                      r'<script.*?</script>|'
+                      r'<!--.*?-->|'
+                      r'<.*?>|'
+                      r'<head.*?</head>|',
                       '',
-                      html)  # sub areas of pre, style, script, label comment, labels
+                      html, flags=re.I|re.S)  # sub areas of pre, style, script, label comment, labels
 
         strip_list = [' ', '\\']  # only replace characters at the line's beginning and ending
 
@@ -55,6 +55,7 @@ class Extractor:
 
         flag = 0
         contents = []
+        # 滑动窗口计算每一行的粘连度
         for i in range(smooth_windows, len(count) - smooth_windows - 1):
             # 一段文字开始的标准，这个标准应该是宽容的
             if all([flag == 0, count[i] > start_eps/2, smooth_count[i - smooth_windows] > start_eps]):
@@ -90,7 +91,7 @@ if __name__ == '__main__':
     # url = 'http://sports.ifeng.com/a/20180906/60028642_0.shtml?_zbs_baidu_news'
     url = 'http://www.xinhuanet.com/politics/xxjxs/2019-09/16/c_1125001493.htm'
 
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 1:
         url = sys.argv[1]
 
     extractor = Extractor()
