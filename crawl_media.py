@@ -60,7 +60,7 @@ class DynamicStreamCrawler(Crawler):
 
         if 'EXT-X-KEY' in text:
             key_uri = re.findall('URI="(.+)"', text)[0]
-            key_url = os.path.split(response.url)[0] + '/' + key_uri
+            key_url = home_url + '/' + key_uri
             key = self.session.get(key_url).content
             aes = AES.new(key, AES.MODE_CBC, key)
 

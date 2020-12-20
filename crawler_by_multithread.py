@@ -14,8 +14,14 @@ class CrawlerByPool(Crawler):
         pool = ThreadPoolExecutor(max_workers=10)
         pool.map(self.repeat_crawl, urls)
 
-        while not self.q.empty():
-            print(self.q.get())
+        i = 0
+        while True:
+            if not self.q.empty():
+                print(self.q.get())
+                i += 1
+
+            if i >= len(urls):
+                break
 
     @add_delay()
     def repeat_crawl(self, url: str, *args, **kwargs):
