@@ -142,9 +142,9 @@ class Crawler:
         return title
 
     def start4url(self, url, *args, **kwargs):
-        """推荐任务开始入口，从一个包含url列表的url页面开始爬取网站，应包含页面解析获取url操作
-        默认调用 get_response() 获取响应，解析获取url列表后调用 run() 方法下达循环抓取任务
-        请根据需求继承并改写该函数
+        """推荐任务开始入口
+        输入一个包含url列表的网页，解析网页获取url列表后，调用 run() 方法下达循环抓取任务
+        默认调用 get_response() 获取响应
         :param url: 开始抓取的页面
         :param args: 自定义的参数
         :param kwargs: 网络请求用到的参数
@@ -154,6 +154,8 @@ class Crawler:
             return self.run(response, *args, **kwargs)
 
     def start4file(self, path=None, root=None, *args, **kwargs):
+        """推荐任务开始入口
+        输入一个包含url列表的文件或文件夹，解析文件获取url列表后，调用 run() 方法下达循环抓取任务"""
         if path:
             with open(path, 'r', encoding='utf8') as f:
                 urls = f.read().split('\n')
@@ -168,10 +170,10 @@ class Crawler:
             return self.run(urls, *args, **kwargs)
 
     def run(self, obj, *args, **kwargs):
-        """推荐任务开始，输入一个包含url列表的元素，例如一个list型的url列表，一个包含url列表的文件、一个包含url列表的页面等
+        """推荐任务开始入口
+        输入一个包含url列表的元素，例如一个list型的url列表，一个包含url列表的文件、一个包含url列表的页面等
         然后从中解析得到url列表，进行循环抓取工作
-        特别地，解析得到url列表的工作也已封装成 start4*() 系列函数，这些函数会默认条用 run() ，并传入一个list型的url列表。
-        请根据需求继承并改写该函数
+        特别地，解析得到url列表的工作也已封装成 start4*() 系列函数，这些函数会默认调用 run() ，并传入一个list型的url列表。
         :param obj: 开始抓取的url返回的响应
         :param args: 自定义的参数
         :param kwargs: 网络请求时用到的参数
@@ -182,7 +184,12 @@ class Crawler:
     @add_callback(lambda x: logging.error('Something wrong while crawling!'))
     def get_response(self, url: str, *args, **kwargs) -> requests.models.Response or None:
         """获取一般页面html的方法
-        默认有自动探测网页是否可以正常访问、自动探测网页encoding、请求失败重试3次，连接超时失败时程序不中断退出等优化配置
+        默认有
+        * 自动探测网页是否可以正常访问
+        * 自动探测网页encoding
+        * 请求失败重试3次
+        * 连接超时失败时程序不中断退出
+        等优化配置
         :param args: 自定义的参数
         :param kwargs: 网络请求时用到的参数
         """
@@ -202,7 +209,7 @@ class Crawler:
     @add_delay()
     def repeat_crawl(self, url: str, *args, **kwargs):
         """解析重复抓取同一类型页面的方法
-        默认添加延时0.2，但无页面解析方法，需根据需求继承重写该方法
+        默认添加延时0.2，建议在此添加页面解析的方法
         默认调用 get_repeat_response() 获取重复页面的html
         :param url: 需要抓取的url
         :param args: 自定义的参数
