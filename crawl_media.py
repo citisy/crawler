@@ -1,9 +1,12 @@
-from basic_crawler import *
 import re
 import os
+import traceback
+import logging
+import requests
 from urllib.parse import urlparse
 from tqdm import tqdm
 from Crypto.Cipher import AES
+from basic_crawler import Crawler, add_try, add_delay, add_callback
 
 
 class StaticStreamCrawler(Crawler):
@@ -32,12 +35,21 @@ class DynamicStreamCrawler(Crawler):
     EXT-X-VERSION           该属性用不用都可以，可以没有
     爬取直播流文件难点在于如何获取.m3u8文件。"""
 
-    def run(self, response, *args, **kwargs):
-        m3u8_save_path, video_save_path = args[0], args[1]
+    def start4url(self, url, *args,
+                  get_response_kwargs=dict(),
+                  run_kwargs=dict(),
+                  **kwargs):
+        return super(DynamicStreamCrawler, self).start4url(
+            url,
+            get_response_kwargs=dict(auto_encoding=False, **get_response_kwargs),
+            run_kwargs=run_kwargs
+        )
 
+    def run(self, response, *args, m3u8_save_path=None, video_save_path=None, **kwargs):
         if m3u8_save_path:
             self.save_as_file(response.content, m3u8_save_path)
 
+        response.encoding = 'utf8'
         text = response.text
 
         i = 0
@@ -62,6 +74,8 @@ class DynamicStreamCrawler(Crawler):
             key_uri = re.findall('URI="(.+)"', text)[0]
             key_url = home_url + '/' + key_uri
             key = self.session.get(key_url).content
+            with open('key', 'wb') as f:
+                f.write(key)
             aes = AES.new(key, AES.MODE_CBC, key)
 
         if os.path.exists('cache_url'):     # 从上次下载失败的地方重新下载
@@ -78,7 +92,7 @@ class DynamicStreamCrawler(Crawler):
                     if ts_url in cache_url:
                         continue
 
-                    ts = self.repeat_crawl(ts_url, *args, **kwargs)
+                    ts = self.get_repeat_response(ts_url, *args, timeout=10)
 
                     if 'EXT-X-KEY' in text:
                         video_output_file.write(aes.decrypt(ts.content))
@@ -100,3 +114,13 @@ class DynamicStreamCrawler(Crawler):
 
                 traceback.print_exc()
                 exit(1)
+
+    @add_try(count=3, err_type=requests.exceptions.ReadTimeout)
+    def get_repeat_response(self, url: str, *args, **kwargs):
+        response = self.session.get(url, **kwargs)
+
+        response.raise_for_status()
+
+        assert response, f'{response = }'
+
+        return response

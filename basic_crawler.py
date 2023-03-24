@@ -85,17 +85,20 @@ class Crawler:
         self.session.headers.update(self.headers)
         self.cache_dic = dict()
 
-    def save_as_text(self, text, save_path):
+    @staticmethod
+    def save_as_text(text, save_path):
         logging.info(f'saving: {save_path}')
         with open(save_path, 'w', encoding='utf8') as f:
             f.write(text)
 
-    def save_as_file(self, stream, save_path):
+    @staticmethod
+    def save_as_file(stream, save_path):
         logging.info(f'saving: {save_path}')
         with open(save_path, 'wb') as f:
             f.write(stream)
 
-    def save_as_json(self, js, save_path):
+    @staticmethod
+    def save_as_json(js, save_path):
         logging.info(f'saving: {save_path}')
         with open(save_path, 'w', encoding='utf8') as f:
             json.dump(js, f, indent=4, ensure_ascii=False)
@@ -108,7 +111,8 @@ class Crawler:
                 for chunk in r.iter_content(chunk_size=chunk_size):
                     f.write(chunk)
 
-    def save_as_mongodb(self, js, collection):
+    @staticmethod
+    def save_as_mongodb(js, collection):
         collection.update_one(js)
 
     def cache_by_json(self, path=None, root=None):
@@ -133,7 +137,8 @@ class Crawler:
                     logging.error(f'when cache file: {path} meet error: {e}')
                     continue
 
-    def get_title(self, html):
+    @staticmethod
+    def get_title(html):
         titles = re.findall('(?is)<title>(.*?)</title>', html)
         title = ''
         if titles:
@@ -141,7 +146,10 @@ class Crawler:
 
         return title
 
-    def start4url(self, url, *args, **kwargs):
+    def start4url(self, url, *args,
+                  get_response_kwargs=dict(),
+                  run_kwargs=dict(),
+                  **kwargs):
         """推荐任务开始入口
         输入一个包含url列表的网页，解析网页获取url列表后，调用 run() 方法下达循环抓取任务
         默认调用 get_response() 获取响应
@@ -149,9 +157,9 @@ class Crawler:
         :param args: 自定义的参数
         :param kwargs: 网络请求用到的参数
         """
-        response = self.get_response(url, *args, **kwargs)
+        response = self.get_response(url, *args, **get_response_kwargs)
         if response:
-            return self.run(response, *args, **kwargs)
+            return self.run(response, *args, **run_kwargs)
 
     def start4file(self, path=None, root=None, *args, **kwargs):
         """推荐任务开始入口
@@ -180,9 +188,8 @@ class Crawler:
         """
         return obj
 
-    @add_try()
     @add_callback(lambda x: logging.error('Something wrong while crawling!'))
-    def get_response(self, url: str, *args, **kwargs) -> requests.models.Response or None:
+    def get_response(self, url: str, *args, auto_encoding=True, **kwargs) -> requests.models.Response or None:
         """获取一般页面html的方法
         默认有
         * 自动探测网页是否可以正常访问
@@ -197,12 +204,13 @@ class Crawler:
 
         response.raise_for_status()
 
-        a = re.search('charset=["\']?([^\s"\'; ]+)', response.text)  # get html encoding automatically
+        if auto_encoding:
+            a = re.search('charset=["\']?([^\s"\'; ]+)', response.text)  # get html encoding automatically
 
-        if a:
-            response.encoding = a.group(1)
-        else:
-            response.encoding = 'utf8'
+            if a:
+                response.encoding = a.group(1)
+            else:
+                response.encoding = 'utf8'
 
         return response
 

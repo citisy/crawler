@@ -1,5 +1,10 @@
-from crawler_by_simulate_browser import *
-from crawl_media import *
+import logging
+import os
+import re
+from tqdm import tqdm
+from basic_crawler import Crawler, add_try, add_callback, add_delay
+from crawler_by_simulate_browser import SimulateBrowser
+from crawl_media import StaticStreamCrawler
 from bs4 import BeautifulSoup
 
 
@@ -38,10 +43,7 @@ class BaiduBaikeCrawler(SimulateBrowser):
     args[1]: 文本内容保存的地址
     args[2]: 原始HTML文件保存的根目录"""
 
-    def run(self, url, *args, **kwargs):
-        save_path1 = args[1] if len(args) > 1 else None
-        save_path2 = args[2] if len(args) > 2 else None
-
+    def run(self, url, *args, save_path1=None, save_path2=None, **kwargs):
         self.get_response(url)
         self.wait_element('list')
         url_dict = {}
@@ -94,10 +96,8 @@ class BaiduNewsCrawler(SimulateBrowser):
 
     extractor = Extractor()
 
-    def run(self, html: str, *args, **kwargs):
+    def run(self, html: str, *args, json_save_path=None, html_save_path=None, **kwargs):
         self.quit()
-        save_path1 = args[1] if len(args) > 1 else None
-        save_path2 = args[2] if len(args) > 2 else None
         soup = BeautifulSoup(html, 'lxml')
         crawl_list = soup.find('div', id='body').find_all('a')
         if len(crawl_list) == 0:
@@ -118,10 +118,10 @@ class BaiduNewsCrawler(SimulateBrowser):
             contents = self.extractor.extract(html)
             if contents:
                 dic[crawl_url] = {title: contents}
-                if save_path2:
-                    self.save_as_text(html, os.path.join(save_path2, f'{title}.html'))
+                if html_save_path:
+                    self.save_as_text(html, os.path.join(html_save_path, f'{title}.html'))
 
-        self.save_as_json(dic, save_path1)
+        self.save_as_json(dic, json_save_path)
 
     @add_delay()
     def repeat_crawl(self, url, *args, **kwargs):
@@ -157,7 +157,11 @@ class BaiduNewsCrawler(SimulateBrowser):
 
 # crawler = BaiduNewsCrawler()
 # url = 'http://news.baidu.com/'
-# crawler.start4url(url, 5, 'news/baidu_news.json', 'news_html')
+# crawler.start4url(
+#     url, 5, run_kwargs=dict(
+#         json_save_path='news/baidu_news.json',
+#         html_save_path='news_html'
+#     ))
 # crawler.quit()
 
 
@@ -168,10 +172,7 @@ class Ku6Crawler(StaticStreamCrawler):
             self.repeat_crawl(url, *args, **kwargs)
 
     @add_delay()
-    def repeat_crawl(self, url, *args, **kwargs):
-        video_save_root = args[0] if len(args) > 0 else None
-        home_url = args[1] if len(args) > 1 else None
-
+    def repeat_crawl(self, url, *args, video_save_dir=None, home_url=None, **kwargs):
         if url.startswith('/video/'):
             if home_url:
                 url = home_url + url
@@ -181,7 +182,7 @@ class Ku6Crawler(StaticStreamCrawler):
             if video_urls:
                 video_url = video_urls[0]
                 title = re.findall('document.title = "(.*?)"', response.text)[0]
-                self.save_as_big_file(video_url, f'{video_save_root}/{title}.mp4')
+                self.save_as_big_file(video_url, f'{video_save_dir}/{title}.mp4')
 
 # """todo:
 # 1. 字幕文件抓取
@@ -190,4 +191,9 @@ class Ku6Crawler(StaticStreamCrawler):
 # crawler = Ku6Crawler()
 # url = 'https://www.ku6.com/index'
 # home_url = 'https://www.ku6.com'
-# crawler.start4url(url, 'video_', home_url)
+# crawler.start4url(
+#     url,
+#     run_kwargs=dict(
+#         video_save_dir='video_',
+#         home_url=home_url
+#     ))

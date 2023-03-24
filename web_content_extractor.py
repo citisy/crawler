@@ -68,11 +68,11 @@ class Extractor:
         smooth_count = [sum(count[i - smooth_windows:i + smooth_windows + 1]) / smooth_windows
                         for i in range(smooth_windows, len(count) - smooth_windows - 1)]
 
-        import matplotlib.pyplot as plt
-        plt.plot(range(len(count)), count)
-        plt.show()
-        plt.plot(range(len(smooth_count)), smooth_count)
-        plt.show()
+        # import matplotlib.pyplot as plt
+        # plt.plot(range(len(count)), count)
+        # plt.show()
+        # plt.plot(range(len(smooth_count)), smooth_count)
+        # plt.show()
 
         flag = 0
         contents = []
@@ -85,7 +85,7 @@ class Extractor:
                     and count[i] > start_eps / 2
                     and smooth_count[i - smooth_windows] > start_eps
             ):
-                print(smooth_count[i - smooth_windows], smooth_count[i - smooth_windows - 1], count[i])
+                # print(smooth_count[i - smooth_windows], smooth_count[i - smooth_windows - 1], count[i])
                 flag = 1
                 contents.append('')
 

@@ -1,8 +1,11 @@
+import logging
+import time
 import selenium
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.alert import Alert
-from basic_crawler import *
+from basic_crawler import Crawler, add_try, add_delay, add_callback
+from webdriver_manager.chrome import ChromeDriverManager
 
 
 class SimulateBrowser(Crawler):
@@ -15,7 +18,8 @@ class SimulateBrowser(Crawler):
         self.chrome_options = webdriver.ChromeOptions()
         self.chrome_options.headless = headless  # quite mode
 
-        self.browser = webdriver.Chrome(chrome_options=self.chrome_options)
+        self.browser = webdriver.Chrome(ChromeDriverManager().install(),
+                                        chrome_options=self.chrome_options)
         self.browser.set_page_load_timeout(self.timeout)    # 连接超时
         self.browser.set_script_timeout(self.timeout)       # 加载超时
 
